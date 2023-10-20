@@ -6,6 +6,8 @@ add_executable(unet
     main.cpp
     Net.cpp
     Net.h
+    Layer.cpp
+    Layer.h
 )
 
 #set(HDF5_ROOT "C:/Users/Evgen/Desktop/CMake-hdf5-1.14.2/CMake-hdf5-1.14.2/hdf5-1.14.2" CACHE PATH "C:/Users/Evgen/Desktop/CMake-hdf5-1.14.2/CMake-hdf5-1.14.2/hdf5-1.14.2")

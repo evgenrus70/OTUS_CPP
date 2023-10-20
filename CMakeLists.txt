@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(01.unet)
+project(unet)
+
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 add_executable(unet 
     main.cpp
@@ -9,7 +12,9 @@ add_executable(unet
     Layer.cpp
     Layer.h
 )
-
+message("${OpenCV_INCLUDE_DIRS}")
+message("${OpenCV_LIBS}")
+target_link_libraries( unet ${OpenCV_LIBS} )
 #set(HDF5_ROOT "C:/Users/Evgen/Desktop/CMake-hdf5-1.14.2/CMake-hdf5-1.14.2/hdf5-1.14.2" CACHE PATH "C:/Users/Evgen/Desktop/CMake-hdf5-1.14.2/CMake-hdf5-1.14.2/hdf5-1.14.2")
 
 # Find HDF5

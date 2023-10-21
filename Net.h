@@ -12,12 +12,15 @@ class Net {
         std::string imagePath;    
         std::string maskPath;
         std::vector<Layer> layers;
+        Mat image;
 
         Net (std::string,std::string,std::string,std::string);
         void print();
         void printImage(Mat);
         int readImage (std::string);
+        int loadImage();
         int readWeights (std::string);
         void addLayer(Layer); 
-        void printLayers();      
+        void printLayers();
+        void start();      
 };

@@ -11,29 +11,39 @@ void Net::print(){
 }
 
 void Net::printImage(Mat image){
-    for (int i = 0; i < 256; i++) {
-        for (int j = 0; j < 256; j++) {
-            printf("%02hhx", image.at<Vec3b>(i, j)[0]);
-            printf("%02hhx", image.at<Vec3b>(i, j)[1]);
-            printf("%02hhx", image.at<Vec3b>(i, j)[2]);  
-        }
+    //for (int i = 0; i < 256; i++) {
+    //    for (int j = 0; j < 256; j++) {
+            printf("%02hhx", image.at<Vec3b>(0, 0)[0]);
+            printf("%02hhx", image.at<Vec3b>(0, 0)[1]);
+            printf("%02hhx", image.at<Vec3b>(0, 0)[2]);  
+    //    }
         std::cout << std::endl;
-    }
+    //}
     namedWindow("Display Image", WINDOW_AUTOSIZE );
     imshow("Display Image", image);
 } 
 
 int Net::readImage (std::string path) {
     std::cout <<"Image path: " << path <<std::endl;
-    Mat image;
     image = imread(path, IMREAD_COLOR);
     if ( !image.data )
     {
         printf("No image data \n");
         return -1;
     }
-    printImage(image); 
+   // printImage(image); 
     return 0;
+}
+
+int Net::loadImage () {
+    for (int i = 0; i < 256; i++) {
+        for (int j = 0; j < 256; j++) {
+            for (int k = 0; k < 3; k++) {
+                layers[0].inputData(i,j,k) = image.at<Vec3b>(i,j)[k];
+            }
+        }
+    }
+    return 1;
 }
 
 int Net::readWeights (std::string path) {
@@ -48,5 +58,23 @@ void Net::addLayer (Layer layer) {
 void Net::printLayers () {
     for (const auto& layer : layers) {
         std::cout << layer.name << std::endl;
+    }
+}
+
+void Net::start () {
+    loadImage ();
+    //layers[0].forward();
+    int i = 0;
+    for (auto& layer : layers) {
+        layer.forward();
+        if (i < layers.size() - 1)
+            layers[i+1].inputData = layers[i].outputData;
+        i++;
+    }
+    for (auto& layer : layers) {
+        std::cout <<"layer " << layer.numLayer << " inputs" << std::endl;
+        layer.printInputs();
+        std::cout <<"layer " << layer.numLayer << " outputs" << std::endl;
+        layer.printOutputs();
     }
 }

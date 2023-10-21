@@ -12,6 +12,8 @@ class vector_4d
         typedef typename std::vector<T>::iterator iterator;
         typedef typename std::vector<T>::const_iterator const_iterator;
 
+        vector_4d (){}
+
         vector_4d(size_type x, size_type y, size_type z, size_type w)
         :x_(x)
         ,y_(y)
@@ -102,12 +104,13 @@ class vector_3d
 
 class Layer {
     public: 
-        int numLayer, inFm, outFm, inW;
+        int numLayer, inFm, outFm, inW, coreW;
         std::string name;
         vector_3d<int> inputData;
         vector_3d<int> outputData;
+        vector_4d<int> weights;
 
-        Layer (std::string,int,int,int,int);
+        Layer (std::string,int,int,int,int,int);
         void print();
         void forward(); 
         void printInputs();

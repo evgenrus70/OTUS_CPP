@@ -73,8 +73,8 @@ void Net::start () {
     }
     for (auto& layer : layers) {
         std::cout <<"layer " << layer.numLayer << " inputs" << std::endl;
-        layer.printInputs();
+        //layer.printInputs();
         std::cout <<"layer " << layer.numLayer << " outputs" << std::endl;
-        layer.printOutputs();
+        //layer.printOutputs();
     }
 }

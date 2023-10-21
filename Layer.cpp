@@ -25,30 +25,29 @@ void Layer::print(){
 }
 
 void Layer::printInputs(){
-    /*for (int i = 0; i < inW; i++) {
+    for (int i = 0; i < inW; i++) {
         for (int j = 0; j < inW; j++) {
             for (int k = 0; k < inFm; k++) {
                 std::cout << inputData(i,j,k);
             }
         }
-    }*/
-    std::cout << inputData(0,0,0);
+    }    
     std::cout<<"\n";
 }
 
 void Layer::printOutputs(){
-    /*for (int i = 0; i < inW; i++) {
+    for (int i = 0; i < inW; i++) {
         for (int j = 0; j < inW; j++) {
             for (int k = 0; k < outFm; k++) {
                 std::cout << outputData(i,j,k);
             }
         }
-    }*/
-    std::cout << outputData(0,0,0);
+    }
     std::cout<<"\n";
 }
 
 void Layer::forward () { 
+    std::cout << name << std::endl;
     vector_4d<int> out_tmp (inW,inW,outFm,inFm); 
     int i = 0, j = 0;
     for (int ix = 0; ix < outFm; ix++) {

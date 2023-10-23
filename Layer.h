@@ -115,6 +115,7 @@ class Layer {
         void print();
         void forward(); 
         void conv();
+        void conv_gemm();
         void pool();
         void upsample();
         void printInputs();

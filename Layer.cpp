@@ -2,9 +2,10 @@
 #include <functional>
 #include <vector>
 
-Layer::Layer (std::string _name, int _numLayer, int _inFm, int _outFm, int _inW, int _coreW) {
-    name = _name;
+Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inW, int _coreW) {
+    type = _type;
     numLayer = _numLayer;
+    name = type + "_" + std::to_string(numLayer);
     inW = _inW;
     inFm = _inFm;
     outFm = _outFm;
@@ -25,6 +26,7 @@ void Layer::print(){
 }
 
 void Layer::printInputs(){
+    std::cout <<"layer " << numLayer << " inputs" << std::endl;
     for (int i = 0; i < inW; i++) {
         for (int j = 0; j < inW; j++) {
             for (int k = 0; k < inFm; k++) {
@@ -36,6 +38,7 @@ void Layer::printInputs(){
 }
 
 void Layer::printOutputs(){
+    std::cout <<"layer " << numLayer << " outputs" << std::endl;
     for (int i = 0; i < inW; i++) {
         for (int j = 0; j < inW; j++) {
             for (int k = 0; k < outFm; k++) {
@@ -46,7 +49,7 @@ void Layer::printOutputs(){
     std::cout<<"\n";
 }
 
-void Layer::forward () { 
+void Layer::conv () {
     std::cout << name << std::endl;
     vector_4d<int> out_tmp (inW,inW,outFm,inFm); 
     int i = 0, j = 0;
@@ -64,11 +67,21 @@ void Layer::forward () {
             }
         }
     }
-    /*for (int i = 0; i < inW; i++) {
-        for (int j = 0; j < inW; j++) {
-            for (int k = 0; k < inFm; k++) {
-                outputData(i,j,k) = inputData(i,j,k) + numLayer;
-            }
-        }
-    }*/
+}
+
+void Layer::pool () {
+    std::cout << name << std::endl;
+}
+
+void Layer::upsample(){
+    std::cout << name << std::endl;
+}
+
+void Layer::forward () {
+    if (!type.compare("conv")) 
+        conv();
+    else if (!type.compare("pool")) 
+        pool();
+    else if (!type.compare("upsample")) 
+        upsample();
 }

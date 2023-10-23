@@ -106,6 +106,7 @@ class Layer {
     public: 
         int numLayer, inFm, outFm, inW, coreW;
         std::string name;
+        std::string type;
         vector_3d<int> inputData;
         vector_3d<int> outputData;
         vector_4d<int> weights;
@@ -113,6 +114,9 @@ class Layer {
         Layer (std::string,int,int,int,int,int);
         void print();
         void forward(); 
+        void conv();
+        void pool();
+        void upsample();
         void printInputs();
         void printOutputs();   
 };

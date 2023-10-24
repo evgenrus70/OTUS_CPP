@@ -129,18 +129,7 @@ void Layer::pool () {
     int inSize_true = inSize - 2 * border;
     int outSize_true = (inSize_true - coreSize) / stride + 1;
     int outSize = outSize_true + 2 * border;
-    float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
-    float *outputs_ptr = new float[inSize * inSize * outFm];
-    float *true_inputs = new float[inFm * inSize_true * inSize_true];
-    for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
-        for (int y = border, true_y = 0; y < inSize-border; ++y, ++true_y) {
-            for (int x = border, true_x = 0; x < inSize-border; ++x,++true_x) {
-                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
-            }
-        }
-    }
-
-    int tmp_max = 0;
+    int tmp_max        = 0;
     int input_x        = 0;
     int input_y        = 0;
     int output_c       = 0;
@@ -152,36 +141,49 @@ void Layer::pool () {
     int zero_fr_top    = border;
     int output_x       = zero_fr_left;
     int output_y       = zero_fr_top;
-    int prev_output_x    = zero_fr_left;
-    int prev_output_y    = zero_fr_top;
+    int prev_output_x  = zero_fr_left;
+    int prev_output_y  = zero_fr_top;
     int stride_x       = stride;
-    int output_w_calc  = outSize + border ;
-    int output_h_calc  = outSize + border;
+    int output_w_calc  = outSize_true + border ;
+    int output_h_calc  = outSize_true + border;
 
-    //float (*inputs_data)[inSize_true][inSize_true];
-    //inputs_data = ( float(*)[inSize_true][inSize_true])true_inputs;
-    vector_3d<float> inputs_data  (outFm,output_w_calc,output_h_calc);
-    vector_3d<float> outputs_data (outFm,output_w_calc,output_h_calc);
+    float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
+    float *outputs_ptr = new float[outSize * outSize * outFm];
+    float *true_inputs = new float[inFm * inSize_true * inSize_true];
+    for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
+        for (int y = border, true_y = 0; y < inSize-border; ++y, ++true_y) {
+            for (int x = border, true_x = 0; x < inSize-border; ++x,++true_x) {
+                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
+            }
+        }
+    }
+    /*
+    size_type pos_in_3d_plane = x_ * y_ * z_pos;
+    size_type pos_in_2d_plane = x_ * y_pos;
+    size_type pos_in_1d_plane = x_pos;
+    return data_[pos_in_3d_plane + pos_in_2d_plane + pos_in_1d_plane];
+    */
+    //float (*inputs_data)[256][256];
+    //inputs_data = ( float(*)[256][256])true_inputs;
 
-    //float(*outputs_data)[outSize][outSize];
-    //outputs_data = ( float(*)[outSize][outSize])outputs_ptr;
+    //float(*outputs_data)[258][258];
+    //outputs_data = ( float(*)[258][258])outputs_ptr;
 
     for (output_y = zero_fr_top ; output_y < output_h_calc; ++output_y) {
             for (output_x = zero_fr_left ; output_x < output_w_calc; ++output_x) {
                 for (output_c = 0; output_c < outFm; ++output_c) {
-                    tmp_max = inputs_data(output_c,input_y,input_x);
+                    tmp_max = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                     for (weight_shift_y = 0; weight_shift_y < coreSize; ++weight_shift_y) {
                         for (weight_shift_x = 0; weight_shift_x < coreSize; ++weight_shift_x) {
-                            if (tmp_max < inputs_data(output_c,input_y,input_x)){
-                                tmp_max = inputs_data(output_c,input_y,input_x);
+                            if (tmp_max < true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c]){
+                                tmp_max = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                             }
                             ++input_x;
                         }
                         input_x = prev_input_x;
                         ++input_y;
                     }
-                    outputs_data(output_c,output_y,output_x) = tmp_max;
-                    // tmp_max = (T)(0);
+                    outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_x] = tmp_max;
                     input_x = prev_input_x;
                     input_y = prev_input_y;
                 }
@@ -194,13 +196,81 @@ void Layer::pool () {
             prev_input_y += stride_x;
             input_y = prev_input_y;
     }
+    delete inputs_ptr;
+    delete outputs_ptr;
+    delete true_inputs;
     const auto end{std::chrono::steady_clock::now()};
     const std::chrono::duration<double> elapsed_seconds{end - start};
     std::cout<< "End " << name <<" with time: " <<  elapsed_seconds.count() << std::endl;
 }
 
 void Layer::upsample(){
-    std::cout << name << std::endl;
+    std::cout<<"Start " << name << std::endl;
+    const auto start{std::chrono::steady_clock::now()};
+    int inSize_true = inSize - 2 * border;
+    int outSize_true = (inSize_true - coreSize) / stride + 1;
+    int outSize = outSize_true + 2 * border;
+    int tmp_max        = 0;
+    int input_x        = 0;
+    int input_y        = 0;
+    int output_c       = 0;
+    int prev_input_x   = 0;
+    int prev_input_y   = 0;
+    int weight_shift_x = 0;
+    int weight_shift_y = 0;
+    int zero_fr_left   = border;
+    int zero_fr_top    = border;
+    int output_x       = zero_fr_left;
+    int output_y       = zero_fr_top;
+    int prev_output_x  = zero_fr_left;
+    int prev_output_y  = zero_fr_top;
+    int stride_x       = stride;
+    int output_w_calc  = outSize_true + border ;
+    int output_h_calc  = outSize_true + border;
+
+    float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
+    float *outputs_ptr = new float[outSize * outSize * outFm];
+    float *true_inputs = new float[inFm * inSize_true * inSize_true];
+
+    for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
+        for (int y = border, true_y = 0; y < inSize - border; ++y, ++true_y) {
+            for (int x = border, true_x =0; x < inSize - border; ++x,++true_x) {
+                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
+            }
+        }
+    }
+
+
+    for (input_y = 0 ; input_y < inSize_true; ++input_y) {
+            for (input_x = 0 ; input_x < inSize_true; ++input_x) {
+                for (output_c = 0; output_c < outFm; ++output_c) {
+                    tmp_max = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
+                    for (weight_shift_y = 0; weight_shift_y < coreSize; ++weight_shift_y) {
+                        for (weight_shift_x = 0; weight_shift_x < coreSize; ++weight_shift_x) {
+                            outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_x] = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
+                            ++output_x;
+                        }
+                        output_x = prev_output_x;
+                        ++output_y;
+                    }
+                    output_x = prev_output_x;
+                    output_y = prev_output_y;
+                }
+                prev_output_x += stride_x;
+                output_y       = prev_output_y;
+                output_x       = prev_output_x;
+            }
+            prev_output_x  = zero_fr_left;
+            output_x       = zero_fr_left;
+            prev_output_y += stride_x;
+            output_y       = prev_output_y;
+    }
+    delete inputs_ptr;
+    delete outputs_ptr;
+    delete true_inputs;
+    const auto end{std::chrono::steady_clock::now()};
+    const std::chrono::duration<double> elapsed_seconds{end - start};
+    std::cout<< "End " << name <<" with time: " <<  elapsed_seconds.count() << std::endl;
 }
 
 void Layer::forward () {

@@ -208,7 +208,7 @@ void Layer::upsample(){
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
     int inSize_true = inSize - 2 * border;
-    int outSize_true = (inSize_true - coreSize) / stride + 1;
+    int outSize_true = inSize_true * coreSize;
     int outSize = outSize_true + 2 * border;
     int tmp_max        = 0;
     int input_x        = 0;
@@ -240,14 +240,19 @@ void Layer::upsample(){
         }
     }
 
-
+      /*
+    size_type pos_in_3d_plane = x_ * y_ * z_pos;
+    size_type pos_in_2d_plane = x_ * y_pos;
+    size_type pos_in_1d_plane = x_pos;
+    return data_[pos_in_3d_plane + pos_in_2d_plane + pos_in_1d_plane];
+    */
     for (input_y = 0 ; input_y < inSize_true; ++input_y) {
             for (input_x = 0 ; input_x < inSize_true; ++input_x) {
                 for (output_c = 0; output_c < outFm; ++output_c) {
                     tmp_max = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                     for (weight_shift_y = 0; weight_shift_y < coreSize; ++weight_shift_y) {
                         for (weight_shift_x = 0; weight_shift_x < coreSize; ++weight_shift_x) {
-                            outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_x] = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
+                            outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_c] = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                             ++output_x;
                         }
                         output_x = prev_output_x;

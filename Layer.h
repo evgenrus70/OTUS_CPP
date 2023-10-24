@@ -104,14 +104,14 @@ class vector_3d
 
 class Layer {
     public: 
-        int numLayer, inFm, outFm, inW, coreW;
+        int numLayer, inFm, outFm, inSize, border, coreSize, stride;
         std::string name;
         std::string type;
         vector_3d<int> inputData;
         vector_3d<int> outputData;
         vector_4d<int> weights;
 
-        Layer (std::string,int,int,int,int,int);
+        Layer (std::string,int,int,int,int,int,int,int);
         void print();
         void forward(); 
         void conv();

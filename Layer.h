@@ -107,9 +107,9 @@ class Layer {
         int numLayer, inFm, outFm, inSize, border, coreSize, stride;
         std::string name;
         std::string type;
-        vector_3d<int> inputData;
-        vector_3d<int> outputData;
-        vector_4d<int> weights;
+        float *inputData;
+        float *outputData;
+        float *weights;
 
         Layer (std::string,int,int,int,int,int,int,int);
         void print();

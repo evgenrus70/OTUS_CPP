@@ -13,8 +13,9 @@ class Net {
         std::string maskPath;
         std::vector<Layer> layers;
         Mat image;
+        int imgSize;
 
-        Net (std::string,std::string,std::string,std::string);
+        Net (std::string,std::string,std::string,std::string,int);
         void print();
         void printImage(Mat);
         int readImage (std::string);

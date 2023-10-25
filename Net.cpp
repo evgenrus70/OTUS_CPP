@@ -1,10 +1,11 @@
 #include "Net.h"
 
-Net::Net (std::string _name,std::string _weightsPath,std::string _imagePath,std::string _maskPath) {
+Net::Net (std::string _name,std::string _weightsPath,std::string _imagePath,std::string _maskPath, int _imgSize) {
     name = _name;
     weightsPath = _weightsPath;
     imagePath = _imagePath;
     maskPath = _maskPath;
+    imgSize = _imgSize;
 }
 void Net::print(){
     
@@ -36,10 +37,12 @@ int Net::readImage (std::string path) {
 }
 
 int Net::loadImage () {
-    for (int i = 1; i < 257; i++) {
-        for (int j = 1; j < 257; j++) {
-            for (int k = 0; k < 3; k++) {
-                layers[0].inputData(i,j,k) = image.at<Vec3b>(i-1,j-1)[k];
+    int channelsCount = 3;
+    layers[0].inputData = new float[imgSize*imgSize*channelsCount];
+    for (int i = 0; i < imgSize; i++) {
+        for (int j = 0; j < imgSize; j++) {
+            for (int k = 0; k < channelsCount; k++) {
+                layers[0].inputData[imgSize*imgSize+k + imgSize*j + i]  = image.at<Vec3b>(i,j)[k];
             }
         }
     }

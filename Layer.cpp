@@ -15,15 +15,6 @@ Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSi
     coreSize = _coreSize;
     border = _border;
     stride = _stride;
-    //inputData = vector_3d(inSize,inSize,inFm);
-    //outputData = vector_3d(inSize,inSize,outFm);
-
-    vector_3d<int> _inputData (inSize,inSize,inFm);
-    vector_3d<int> _outputData (inSize,inSize,outFm);
-    vector_4d<int> _weights (inFm,outFm,coreSize,coreSize);
-    inputData = _inputData;
-    outputData = _outputData;
-    weights = _weights;
 }
 
 void Layer::print(){
@@ -35,7 +26,7 @@ void Layer::printInputs(){
     for (int i = 0; i < inSize; i++) {
         for (int j = 0; j < inSize; j++) {
             for (int k = 0; k < inFm; k++) {
-                std::cout << inputData(i,j,k);
+                std::cout << inputData[inSize*inSize*k + inSize*j + i];
             }
         }
     }    
@@ -47,7 +38,7 @@ void Layer::printOutputs(){
     for (int i = 0; i < inSize; i++) {
         for (int j = 0; j < inSize; j++) {
             for (int k = 0; k < outFm; k++) {
-                std::cout << outputData(i,j,k);
+                std::cout << outputData[inSize*inSize*k + inSize*j + i];
             }
         }
     }
@@ -139,11 +130,6 @@ void Layer::pool () {
     size_type pos_in_1d_plane = x_pos;
     return data_[pos_in_3d_plane + pos_in_2d_plane + pos_in_1d_plane];
     */
-    //float (*inputs_data)[256][256];
-    //inputs_data = ( float(*)[256][256])true_inputs;
-
-    //float(*outputs_data)[258][258];
-    //outputs_data = ( float(*)[258][258])outputs_ptr;
 
     for (output_y = zero_fr_top ; output_y < output_h_calc; ++output_y) {
             for (output_x = zero_fr_left ; output_x < output_w_calc; ++output_x) {

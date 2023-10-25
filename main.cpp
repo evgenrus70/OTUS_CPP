@@ -9,7 +9,7 @@ using namespace cv;
 
 int main () {
     std::cout <<"Start U-Net CNN" <<std::endl;
-    Net unet = Net("unet",wghtsPath,imgPath,"path/mask");
+    Net unet = Net("unet",wghtsPath,imgPath,"path/mask",256);
     unet.print();
     unet.readImage(unet.imagePath);
     unet.readWeights(unet.weightsPath);

@@ -115,9 +115,12 @@ class Layer {
         void print();
         void forward(); 
         void conv();
-        void conv_gemm();
         void pool();
         void upsample();
+        void addBias();
+        void activate();
+        void postProcessing();
+        void normalize();
         void printInputs();
         void printOutputs();   
 };

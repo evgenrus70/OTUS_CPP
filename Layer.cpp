@@ -57,30 +57,6 @@ void Layer::printOutputs(){
 void Layer::conv () {
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
-    vector_4d<int> out_tmp (inSize,inSize,outFm,inFm); 
-    int i = 0, j = 0;
-    for (int ix = 0; ix < outFm; ix++) {
-        for (int iy = 0; iy < inFm; iy++) {
-            for (int x = 0; x < inSize - 2*border; x++) {
-                for (int y = 0; y < inSize - 2*border; y++) {
-                    for (i = 0; i < coreSize; i++) {
-                        for (j = 0; j < coreSize; j++) {
-                            out_tmp(x,y,ix,iy) +=  inputData(i+x, j+y, iy) * weights(ix,iy,i,j);
-                        }
-                    }
-                    outputData(x,y,ix) += out_tmp(x,y,ix,iy);
-                }
-            }
-        }
-    }
-    const auto end{std::chrono::steady_clock::now()};
-    const std::chrono::duration<double> elapsed_seconds{end - start};
-    std::cout<< "End " << name <<" with time: " <<  elapsed_seconds.count() << std::endl;
-}
-
-void Layer::conv_gemm () {
-    std::cout<<"Start gemm " << name << std::endl;
-    const auto start{std::chrono::steady_clock::now()};
     int inSize_true = inSize - 2 * border;
     int outSize_true = (inSize_true - coreSize) / stride + 1;
     int outSize = outSize_true + 2 * border;
@@ -278,9 +254,74 @@ void Layer::upsample(){
     std::cout<< "End " << name <<" with time: " <<  elapsed_seconds.count() << std::endl;
 }
 
+void Layer::addBias () {
+    std::cout<<"Add bias to " << name << std::endl;
+    int inSize_true = inSize - 2 * border;
+    int outSize_true = inSize_true ;
+    int outSize = outSize_true + 2 * border;
+    int n = outSize * outSize;
+    int m = outFm;
+
+    int n1 = outSize_true + border;
+    int n2 = outSize_true + border;
+    int calc_size = outSize_true * outSize_true;
+
+    float *biases_ptr = new float[outFm];
+    float *outputs_ptr = new float[outSize * outSize * outFm];
+
+    int i,j1,j2,k;
+    //#pragma omp parallel for
+    for(i = 0; i < m; ++i){
+        float A_PART = biases_ptr[i];
+        for(j1 = border; j1 < n1; ++j1){
+            for(j2 = border; j2 < n2; ++j2){
+                outputs_ptr[i*n+ j1*outSize + j2] += A_PART;
+            }
+        }
+    }
+    delete biases_ptr;
+}
+
+void Layer::activate(){
+    std::cout<<"Activation function of " << name << std::endl;
+    int outSize =  inSize * inSize * outFm;
+    float *outputs_ptr = new float[outSize];
+    float neg_coef = 0.3f;
+    float pos_coef = 1;
+    for (int i = 0; i < outSize;++i){
+        outputs_ptr[i] = outputs_ptr[i] > 0 ? outputs_ptr[i]*pos_coef : outputs_ptr[i]*neg_coef;
+    }
+}
+
+void Layer::normalize(){
+    std::cout<<"Normalization of " << name << std::endl;
+    float *inputs_ptr = new float[inSize * inSize * inFm];
+    float *outputs_ptr = new float[inSize * inSize * outFm];
+    float *alpha_coefs = new float[inFm];
+    float *beta_coefs = new float[inFm];
+    for(int i=0; i < inFm; ++i){
+        for (int j = border; j < inSize - border; ++j){
+            for (int k = border; k < inSize - border; ++k){
+               outputs_ptr[inFm*inSize*k + inFm*j + i] = inputs_ptr[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
+            }
+        }
+    }
+    delete inputs_ptr;
+    delete alpha_coefs;
+    delete beta_coefs;
+}
+
+void Layer::postProcessing () {
+    addBias();
+    activate();
+    normalize();
+}
+
 void Layer::forward () {
-    if (!type.compare("conv")) 
-        conv_gemm();
+    if (!type.compare("conv")) {
+        conv();
+        postProcessing();
+    }  
     else if (!type.compare("pool")) 
         pool();
     else if (!type.compare("upsample")) 

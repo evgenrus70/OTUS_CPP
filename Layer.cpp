@@ -296,17 +296,15 @@ void Layer::activate(){
 void Layer::normalize(){
     std::cout<<"Normalization of " << name << std::endl;
     float *inputs_ptr = new float[inSize * inSize * inFm];
-    float *outputs_ptr = new float[inSize * inSize * outFm];
     float *alpha_coefs = new float[inFm];
     float *beta_coefs = new float[inFm];
     for(int i=0; i < inFm; ++i){
         for (int j = border; j < inSize - border; ++j){
             for (int k = border; k < inSize - border; ++k){
-               outputs_ptr[inFm*inSize*k + inFm*j + i] = inputs_ptr[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
+               inputs_ptr[inFm*inSize*k + inFm*j + i] = inputs_ptr[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
             }
         }
     }
-    delete inputs_ptr;
     delete alpha_coefs;
     delete beta_coefs;
 }

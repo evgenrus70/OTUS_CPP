@@ -16,7 +16,7 @@ void Net::printImage(int pad){
     int k = 0;
     for (int i = 0; i < imgSizePad; i++) {
         for (int j = 0; j < imgSizePad; j++) {
-            printf("%f ", layers[0].inputData[imgSizePad * imgSizePad * k + imgSizePad * j + i]); // x_size * y_size * z + x_size * y + x
+            printf("%.1f ", layers[0].inputData[imgSizePad * imgSizePad * k + imgSizePad * j + i]); // x_size * y_size * z + x_size * y + x
         }
         std::cout << std::endl;
     }

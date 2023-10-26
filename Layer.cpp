@@ -94,9 +94,9 @@ void Layer::conv () {
     int pad_l = stride;
     int ldc2 = outSize;
 
-    float *A = new float[outFm * inFm * coreSize * coreSize];       // weights
-    float *B = new float[N1 * N1 * coreSize * coreSize * inFm];     // input data
-    float *C = new float[N1 * N1 * outFm];                          // result
+    weights = new float[outFm * inFm * coreSize * coreSize];            // weights
+    float* inputs = new float[N1 * N1 * coreSize * coreSize * inFm];    // input data
+    outputData = new float[N1 * N1 * outFm];                            // result
     float *true_inputs = NULL; 
 
     if (pad){
@@ -113,9 +113,9 @@ void Layer::conv () {
     }
 
     if (coreSize == 1) {
-        B = true_inputs;
+        inputs = true_inputs;
     } else {
-        im2col(true_inputs,B);
+        im2col(true_inputs,inputs);
     }
 
     int i,j,j1,j2,k;
@@ -123,19 +123,18 @@ void Layer::conv () {
     for(i = M_start; i < M_start + M; ++i){   // i = 0; i < 64; i++
         for(k = 0; k < K; ++k){             // k = 0; k < 27; ++k
             j = 0;                          
-            float A_PART = A[i*lda+k]; // A_PART = A[0*27+0] : A[63*27+26];
+            float A_PART = weights[i*lda+k]; // A_PART = A[0*27+0] : A[63*27+26];
             for(j1 = pad_t; j1 < N1; ++j1) {    // j1 = 1; j1 < 258; ++j1
                 for(j2 = pad_l; j2 < N2; ++j2) {// j2 = 1; j2 < 258; ++j2
-                    C[i*ldc1 + j1*ldc2 + j2] += A_PART*B[k*ldb + j]; // C[0*65536 + 1*256 + 1] += A_PART*B[0*65536 + 0] : C[63*65536 + 257*256 + 257]
+                    outputData[i*ldc1 + j1*ldc2 + j2] += A_PART*inputs[k*ldb + j]; // C[0*65536 + 1*256 + 1] += A_PART*B[0*65536 + 0] : C[63*65536 + 257*256 + 257]
                     j++;
                 }
             }
         }
     }
     
-    delete A;
-    delete B;
-    delete C;
+    delete weights;
+    delete inputs;
     const auto end{std::chrono::steady_clock::now()};
     const std::chrono::duration<double> elapsed_seconds{end - start};
     std::cout<< "End gemm " << name <<" with time: " <<  elapsed_seconds.count() << std::endl;
@@ -165,13 +164,12 @@ void Layer::pool () {
     int output_w_calc  = outSize_true + pad ;
     int output_h_calc  = outSize_true + pad;
 
-    float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
-    float *outputs_ptr = new float[outSize * outSize * outFm];
+    outputData = new float[outSize * outSize * outFm];
     float *true_inputs = new float[inFm * inSize_true * inSize_true];
     for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
         for (int y = pad, true_y = 0; y < inSize-pad; ++y, ++true_y) {
             for (int x = pad, true_x = 0; x < inSize-pad; ++x,++true_x) {
-                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
+                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputData[c*inSize*inSize + y*inSize + x];
             }
         }
     }
@@ -196,7 +194,7 @@ void Layer::pool () {
                         input_x = prev_input_x;
                         ++input_y;
                     }
-                    outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_x] = tmp_max;
+                    outputData[outFm * outSize * output_x + outFm * output_y + output_x] = tmp_max;
                     input_x = prev_input_x;
                     input_y = prev_input_y;
                 }
@@ -209,8 +207,6 @@ void Layer::pool () {
             prev_input_y += stride_x;
             input_y = prev_input_y;
     }
-    delete inputs_ptr;
-    delete outputs_ptr;
     delete true_inputs;
     const auto end{std::chrono::steady_clock::now()};
     const std::chrono::duration<double> elapsed_seconds{end - start};
@@ -241,14 +237,13 @@ void Layer::upsample(){
     int output_w_calc  = outSize_true + pad ;
     int output_h_calc  = outSize_true + pad;
 
-    float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
-    float *outputs_ptr = new float[outSize * outSize * outFm];
+    outputData = new float[outSize * outSize * outFm];
     float *true_inputs = new float[inFm * inSize_true * inSize_true];
 
     for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
         for (int y = pad, true_y = 0; y < inSize - pad; ++y, ++true_y) {
             for (int x = pad, true_x =0; x < inSize - pad; ++x,++true_x) {
-                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
+                true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputData[c*inSize*inSize + y*inSize + x];
             }
         }
     }
@@ -265,7 +260,7 @@ void Layer::upsample(){
                     tmp_max = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                     for (weight_shift_y = 0; weight_shift_y < coreSize; ++weight_shift_y) {
                         for (weight_shift_x = 0; weight_shift_x < coreSize; ++weight_shift_x) {
-                            outputs_ptr[outFm * outSize * output_x + outFm * output_y + output_c] = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
+                            outputData[outFm * outSize * output_x + outFm * output_y + output_c] = true_inputs[outFm * inSize_true * input_x + outFm * input_y + output_c];
                             ++output_x;
                         }
                         output_x = prev_output_x;
@@ -283,8 +278,6 @@ void Layer::upsample(){
             prev_output_y += stride_x;
             output_y       = prev_output_y;
     }
-    delete inputs_ptr;
-    delete outputs_ptr;
     delete true_inputs;
     const auto end{std::chrono::steady_clock::now()};
     const std::chrono::duration<double> elapsed_seconds{end - start};
@@ -304,7 +297,7 @@ void Layer::addBias () {
     int calc_size = outSize_true * outSize_true;
 
     float *biases_ptr = new float[outFm];
-    float *outputs_ptr = new float[outSize * outSize * outFm];
+    outputData = new float[outSize * outSize * outFm];
 
     int i,j1,j2,k;
     //#pragma omp parallel for
@@ -312,7 +305,7 @@ void Layer::addBias () {
         float A_PART = biases_ptr[i];
         for(j1 = pad; j1 < n1; ++j1){
             for(j2 = pad; j2 < n2; ++j2){
-                outputs_ptr[i*n+ j1*outSize + j2] += A_PART;
+                outputData[i*n+ j1*outSize + j2] += A_PART;
             }
         }
     }
@@ -322,23 +315,21 @@ void Layer::addBias () {
 void Layer::activate(){
     std::cout<<"Activation function of " << name << std::endl;
     int outSize =  inSize * inSize * outFm;
-    float *outputs_ptr = new float[outSize];
     float neg_coef = 0.3f;
     float pos_coef = 1;
     for (int i = 0; i < outSize;++i){
-        outputs_ptr[i] = outputs_ptr[i] > 0 ? outputs_ptr[i]*pos_coef : outputs_ptr[i]*neg_coef;
+        outputData[i] = outputData[i] > 0 ? outputData[i]*pos_coef : outputData[i]*neg_coef;
     }
 }
 
 void Layer::normalize(){
     std::cout<<"Normalization of " << name << std::endl;
-    float *inputs_ptr = new float[inSize * inSize * inFm];
     float *alpha_coefs = new float[inFm];
     float *beta_coefs = new float[inFm];
     for(int i=0; i < inFm; ++i){
         for (int j = pad; j < inSize - pad; ++j){
             for (int k = pad; k < inSize - pad; ++k){
-               inputs_ptr[inFm*inSize*k + inFm*j + i] = inputs_ptr[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
+               outputData[inFm*inSize*k + inFm*j + i] = outputData[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
             }
         }
     }

@@ -83,17 +83,13 @@ void Net::printLayers () {
 
 void Net::start () {
     imageToInput(1);
-    printImage(1);
+    //printImage(1);
     //layers[0].forward();
     int i = 0;
     for (auto& layer : layers) {
-        //layer.forward();
-        //if (i < layers.size() - 1)
-        //    layers[i+1].inputData = layers[i].outputData;
+        layer.forward();
+        if (i < layers.size() - 1)
+            layers[i+1].inputData = layers[i].outputData;
         i++;
-    }
-    for (auto& layer : layers) {
-        //layer.printInputs();
-        //layer.printOutputs();
     }
 }

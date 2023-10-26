@@ -17,9 +17,9 @@ class Net {
 
         Net (std::string,std::string,std::string,std::string,int);
         void print();
-        void printImage(Mat);
+        void printImage(int);
         int readImage (std::string);
-        int loadImage();
+        int imageToInput(int);
         int readWeights (std::string);
         void addLayer(Layer); 
         void printLayers();

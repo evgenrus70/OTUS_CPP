@@ -11,17 +11,17 @@ void Net::print(){
     
 }
 
-void Net::printImage(Mat image){
-    //for (int i = 0; i < 256; i++) {
-    //    for (int j = 0; j < 256; j++) {
-            printf("%02hhx", image.at<Vec3b>(0, 0)[0]);
-            printf("%02hhx", image.at<Vec3b>(0, 0)[1]);
-            printf("%02hhx", image.at<Vec3b>(0, 0)[2]);  
-    //    }
+void Net::printImage(int pad){
+    int imgSizePad = imgSize + pad;
+    int k = 0;
+    for (int i = 0; i < imgSizePad; i++) {
+        for (int j = 0; j < imgSizePad; j++) {
+            printf("%f ", layers[0].inputData[imgSizePad * imgSizePad * k + imgSizePad * j + i]); // x_size * y_size * z + x_size * y + x
+        }
         std::cout << std::endl;
-    //}
-    namedWindow("Display Image", WINDOW_AUTOSIZE );
-    imshow("Display Image", image);
+    }
+    //namedWindow("Display Image", WINDOW_AUTOSIZE );
+    //imshow("Display Image", image);
 } 
 
 int Net::readImage (std::string path) {
@@ -36,13 +36,17 @@ int Net::readImage (std::string path) {
     return 0;
 }
 
-int Net::loadImage () {
+int Net::imageToInput (int pad) {
     int channelsCount = 3;
-    layers[0].inputData = new float[imgSize*imgSize*channelsCount];
-    for (int i = 0; i < imgSize; i++) {
-        for (int j = 0; j < imgSize; j++) {
+    int imgSizePad = imgSize + 2 * pad;
+    layers[0].inputData = new float[imgSizePad*imgSizePad*channelsCount];
+    for (int i = 0; i < imgSizePad; i++) {
+        for (int j = 0; j < imgSizePad; j++) {
             for (int k = 0; k < channelsCount; k++) {
-                layers[0].inputData[imgSize*imgSize+k + imgSize*j + i]  = image.at<Vec3b>(i,j)[k];
+                if (i >= pad && i < imgSize && j >= pad && j < imgSize)
+                    layers[0].inputData[imgSizePad * imgSizePad + k + imgSizePad * j + i]  = image.at<Vec3b>(i,j)[k];
+                else
+                    layers[0].inputData[imgSizePad * imgSizePad + k + imgSizePad * j + i] = 0;
             }
         }
     }
@@ -65,13 +69,14 @@ void Net::printLayers () {
 }
 
 void Net::start () {
-    loadImage ();
+    imageToInput(2);
+    printImage(2);
     //layers[0].forward();
     int i = 0;
     for (auto& layer : layers) {
-        layer.forward();
-        if (i < layers.size() - 1)
-            layers[i+1].inputData = layers[i].outputData;
+        //layer.forward();
+        //if (i < layers.size() - 1)
+        //    layers[i+1].inputData = layers[i].outputData;
         i++;
     }
     for (auto& layer : layers) {

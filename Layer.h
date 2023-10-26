@@ -104,7 +104,7 @@ class vector_3d
 
 class Layer {
     public: 
-        int numLayer, inFm, outFm, inSize, border, coreSize, stride;
+        int numLayer, inFm, outFm, inSize, pad, coreSize, stride;
         std::string name;
         std::string type;
         float *inputData;
@@ -122,5 +122,7 @@ class Layer {
         void postProcessing();
         void normalize();
         void printInputs();
-        void printOutputs();   
+        void printOutputs();
+        void im2col(float*, float*);
+        float im2colGetPixel(float*,int,int,int,int,int,int,int);   
 };

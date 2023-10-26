@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <omp.h>
 
-Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSize, int _border, int _coreSize, int _stride) {
+Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSize, int _pad, int _coreSize, int _stride) {
     type = _type;
     numLayer = _numLayer;
     name = type + "_" + std::to_string(numLayer);
@@ -13,7 +13,7 @@ Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSi
     inFm = _inFm;
     outFm = _outFm;
     coreSize = _coreSize;
-    border = _border;
+    pad = _pad;
     stride = _stride;
 }
 
@@ -45,12 +45,43 @@ void Layer::printOutputs(){
     std::cout<<"\n";
 }
 
+void Layer::im2col (float* data_im, float* data_col) {
+    int c,h,w;
+    int inSize_true = inSize - 2 * pad;
+    int height_col = (inSize_true + 2*pad - coreSize) / stride + 1;
+    int width_col = (inSize_true + 2*pad - coreSize) / stride + 1;
+
+    int channels_col = inFm * coreSize * coreSize;
+    for (c = 0; c < channels_col; ++c) {
+        int w_offset = c % coreSize;
+        int h_offset = (c / coreSize) % coreSize;
+        int c_im = c / coreSize / coreSize;
+        for (h = 0; h < height_col; ++h) {
+            for (w = 0; w < width_col; ++w) {
+                int im_row = h_offset + h * stride;
+                int im_col = w_offset + w * stride;
+                int col_index = (c * height_col + h) * width_col + w;
+                data_col[col_index] = im2colGetPixel(data_im, inSize_true, inSize_true, inFm, im_row, im_col, c_im, pad);
+            }
+        }
+    }
+}
+
+float Layer::im2colGetPixel (float *im, int height, int width, int channels, int row, int col, int channel, int pad){
+    row -= pad;
+    col -= pad;
+
+    if (row < 0 || col < 0 || row >= height || col >= width) 
+        return 0;
+    return im[col + width*(row + height*channel)];
+}
+
 void Layer::conv () {
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
-    int inSize_true = inSize - 2 * border;
+    int inSize_true = inSize - 2 * pad;
     int outSize_true = (inSize_true - coreSize) / stride + 1;
-    int outSize = outSize_true + 2 * border;
+    int outSize = outSize_true + 2 * pad;
     int M = outFm;
     int N1 = inSize;
     int N2 = inSize;
@@ -66,6 +97,26 @@ void Layer::conv () {
     float *A = new float[outFm * inFm * coreSize * coreSize];       // weights
     float *B = new float[N1 * N1 * coreSize * coreSize * inFm];     // input data
     float *C = new float[N1 * N1 * outFm];                          // result
+    float *true_inputs = NULL; 
+
+    if (pad){
+        true_inputs = new float[inFm * inSize_true* inSize_true];
+        for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
+            for (int y = pad, true_y = 0; y < inSize-pad; ++y, ++true_y) {
+                for (int x = pad, true_x =0; x < inSize-pad; ++x,++true_x) {
+                    true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputData[c*inSize*inSize + y*inSize + x];
+                }
+            }
+        }
+    } else {
+        true_inputs = inputData;
+    }
+
+    if (coreSize == 1) {
+        B = true_inputs;
+    } else {
+        im2col(true_inputs,B);
+    }
 
     int i,j,j1,j2,k;
     //#pragma omp parallel for num_threads(4)
@@ -93,9 +144,9 @@ void Layer::conv () {
 void Layer::pool () {
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
-    int inSize_true = inSize - 2 * border;
+    int inSize_true = inSize - 2 * pad;
     int outSize_true = (inSize_true - coreSize) / stride + 1;
-    int outSize = outSize_true + 2 * border;
+    int outSize = outSize_true + 2 * pad;
     int tmp_max        = 0;
     int input_x        = 0;
     int input_y        = 0;
@@ -104,22 +155,22 @@ void Layer::pool () {
     int prev_input_y   = 0;
     int weight_shift_x = 0;
     int weight_shift_y = 0;
-    int zero_fr_left   = border;
-    int zero_fr_top    = border;
+    int zero_fr_left   = pad;
+    int zero_fr_top    = pad;
     int output_x       = zero_fr_left;
     int output_y       = zero_fr_top;
     int prev_output_x  = zero_fr_left;
     int prev_output_y  = zero_fr_top;
     int stride_x       = stride;
-    int output_w_calc  = outSize_true + border ;
-    int output_h_calc  = outSize_true + border;
+    int output_w_calc  = outSize_true + pad ;
+    int output_h_calc  = outSize_true + pad;
 
     float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
     float *outputs_ptr = new float[outSize * outSize * outFm];
     float *true_inputs = new float[inFm * inSize_true * inSize_true];
     for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
-        for (int y = border, true_y = 0; y < inSize-border; ++y, ++true_y) {
-            for (int x = border, true_x = 0; x < inSize-border; ++x,++true_x) {
+        for (int y = pad, true_y = 0; y < inSize-pad; ++y, ++true_y) {
+            for (int x = pad, true_x = 0; x < inSize-pad; ++x,++true_x) {
                 true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
             }
         }
@@ -169,9 +220,9 @@ void Layer::pool () {
 void Layer::upsample(){
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
-    int inSize_true = inSize - 2 * border;
+    int inSize_true = inSize - 2 * pad;
     int outSize_true = inSize_true * coreSize;
-    int outSize = outSize_true + 2 * border;
+    int outSize = outSize_true + 2 * pad;
     int tmp_max        = 0;
     int input_x        = 0;
     int input_y        = 0;
@@ -180,23 +231,23 @@ void Layer::upsample(){
     int prev_input_y   = 0;
     int weight_shift_x = 0;
     int weight_shift_y = 0;
-    int zero_fr_left   = border;
-    int zero_fr_top    = border;
+    int zero_fr_left   = pad;
+    int zero_fr_top    = pad;
     int output_x       = zero_fr_left;
     int output_y       = zero_fr_top;
     int prev_output_x  = zero_fr_left;
     int prev_output_y  = zero_fr_top;
     int stride_x       = stride;
-    int output_w_calc  = outSize_true + border ;
-    int output_h_calc  = outSize_true + border;
+    int output_w_calc  = outSize_true + pad ;
+    int output_h_calc  = outSize_true + pad;
 
     float *inputs_ptr = new float[inSize * inSize * coreSize * coreSize * inFm];
     float *outputs_ptr = new float[outSize * outSize * outFm];
     float *true_inputs = new float[inFm * inSize_true * inSize_true];
 
     for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
-        for (int y = border, true_y = 0; y < inSize - border; ++y, ++true_y) {
-            for (int x = border, true_x =0; x < inSize - border; ++x,++true_x) {
+        for (int y = pad, true_y = 0; y < inSize - pad; ++y, ++true_y) {
+            for (int x = pad, true_x =0; x < inSize - pad; ++x,++true_x) {
                 true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs_ptr[c*inSize*inSize + y*inSize + x];
             }
         }
@@ -242,14 +293,14 @@ void Layer::upsample(){
 
 void Layer::addBias () {
     std::cout<<"Add bias to " << name << std::endl;
-    int inSize_true = inSize - 2 * border;
+    int inSize_true = inSize - 2 * pad;
     int outSize_true = inSize_true ;
-    int outSize = outSize_true + 2 * border;
+    int outSize = outSize_true + 2 * pad;
     int n = outSize * outSize;
     int m = outFm;
 
-    int n1 = outSize_true + border;
-    int n2 = outSize_true + border;
+    int n1 = outSize_true + pad;
+    int n2 = outSize_true + pad;
     int calc_size = outSize_true * outSize_true;
 
     float *biases_ptr = new float[outFm];
@@ -259,8 +310,8 @@ void Layer::addBias () {
     //#pragma omp parallel for
     for(i = 0; i < m; ++i){
         float A_PART = biases_ptr[i];
-        for(j1 = border; j1 < n1; ++j1){
-            for(j2 = border; j2 < n2; ++j2){
+        for(j1 = pad; j1 < n1; ++j1){
+            for(j2 = pad; j2 < n2; ++j2){
                 outputs_ptr[i*n+ j1*outSize + j2] += A_PART;
             }
         }
@@ -285,8 +336,8 @@ void Layer::normalize(){
     float *alpha_coefs = new float[inFm];
     float *beta_coefs = new float[inFm];
     for(int i=0; i < inFm; ++i){
-        for (int j = border; j < inSize - border; ++j){
-            for (int k = border; k < inSize - border; ++k){
+        for (int j = pad; j < inSize - pad; ++j){
+            for (int k = pad; k < inSize - pad; ++k){
                inputs_ptr[inFm*inSize*k + inFm*j + i] = inputs_ptr[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
             }
         }

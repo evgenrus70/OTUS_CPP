@@ -12,7 +12,7 @@ void Net::print(){
 }
 
 void Net::printImage(int pad){
-    int imgSizePad = imgSize + pad;
+    int imgSizePad = imgSize + 2 * pad;
     int k = 0;
     for (int i = 0; i < imgSizePad; i++) {
         for (int j = 0; j < imgSizePad; j++) {
@@ -39,15 +39,28 @@ int Net::readImage (std::string path) {
 int Net::imageToInput (int pad) {
     int channelsCount = 3;
     int imgSizePad = imgSize + 2 * pad;
+    int x = 0, y = 0;
     layers[0].inputData = new float[imgSizePad*imgSizePad*channelsCount];
     for (int i = 0; i < imgSizePad; i++) {
-        for (int j = 0; j < imgSizePad; j++) {
-            for (int k = 0; k < channelsCount; k++) {
-                if (i >= pad && i < imgSize && j >= pad && j < imgSize)
-                    layers[0].inputData[imgSizePad * imgSizePad + k + imgSizePad * j + i]  = image.at<Vec3b>(i,j)[k];
-                else
-                    layers[0].inputData[imgSizePad * imgSizePad + k + imgSizePad * j + i] = 0;
+            for (int j = 0; j < imgSizePad; j++) {
+                for (int k = 0; k < channelsCount; k++) {
+                    layers[0].inputData[imgSizePad * imgSizePad * k + imgSizePad * j + i]  = 0;                                 
+                }
             }
+    }
+
+    for (int i = 0; i < imgSizePad; i++) {
+        if ((i >= pad) && (i <= imgSize)) {
+            for (int j = 0; j < imgSizePad; j++) {
+                if ((j >= pad) && (j <= imgSize)) {
+                    for (int k = 0; k < channelsCount; k++) {
+                        layers[0].inputData[imgSizePad * imgSizePad * k + imgSizePad * j + i]  = image.at<Vec3b>(x,y)[k];                                 
+                    }
+                    y++;
+                }
+            }
+            x++;
+            y=0;
         }
     }
     return 1;
@@ -69,8 +82,8 @@ void Net::printLayers () {
 }
 
 void Net::start () {
-    imageToInput(2);
-    printImage(2);
+    imageToInput(1);
+    printImage(1);
     //layers[0].forward();
     int i = 0;
     for (auto& layer : layers) {

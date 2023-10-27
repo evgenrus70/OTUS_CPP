@@ -326,6 +326,7 @@ void Layer::normalize(){
     std::cout<<"Normalization of " << name << std::endl;
     float *alpha_coefs = new float[inFm];
     float *beta_coefs = new float[inFm];
+    std::cout << "inW: " << inSize << std::endl;
     for(int i=0; i < inFm; ++i){
         for (int j = pad; j < inSize - pad; ++j){
             for (int k = pad; k < inSize - pad; ++k){

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <omp.h>
 
-Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSize, int _pad, int _coreSize, int _stride) {
+Layer::Layer (std::string _type, int _numLayer, int _prevLayer, int _inFm, int _outFm, int _inSize, int _pad, int _coreSize, int _stride) {
     type = _type;
     numLayer = _numLayer;
     name = type + "_" + std::to_string(numLayer);
@@ -15,6 +15,7 @@ Layer::Layer (std::string _type, int _numLayer, int _inFm, int _outFm, int _inSi
     coreSize = _coreSize;
     pad = _pad;
     stride = _stride;
+    prevLayer = _prevLayer;
 }
 
 void Layer::print(){
@@ -76,7 +77,7 @@ float Layer::im2colGetPixel (float *im, int height, int width, int channels, int
     return im[col + width*(row + height*channel)];
 }
 
-void Layer::conv () {
+void Layer::conv (std::vector<Layer> layers) {
     std::cout<<"Start " << name << std::endl;
     const auto start{std::chrono::steady_clock::now()};
     int inSize_true = inSize - 2 * pad;
@@ -93,18 +94,19 @@ void Layer::conv () {
     int pad_t = stride;
     int pad_l = stride;
     int ldc2 = outSize;
+    int outputSize = N1 * N1 * outFm;
 
     weights = new float[outFm * inFm * coreSize * coreSize];            // weights
+    outputData = new float[outputSize];                                 // result  
     float* inputs = new float[N1 * N1 * coreSize * coreSize * inFm];    // input data
-    outputData = new float[N1 * N1 * outFm];                            // result
     float *true_inputs = NULL; 
-
+   
     if (pad){
         true_inputs = new float[inFm * inSize_true* inSize_true];
         for (int c = 0, true_c = 0; c < inFm; ++c,++true_c){
             for (int y = pad, true_y = 0; y < inSize-pad; ++y, ++true_y) {
                 for (int x = pad, true_x =0; x < inSize-pad; ++x,++true_x) {
-                    true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputData[c*inSize*inSize + y*inSize + x];
+                    true_inputs[true_c * inSize_true * inSize_true + true_y*inSize_true + true_x ] = inputs[c*inSize*inSize + y*inSize + x];
                 }
             }
         }
@@ -117,7 +119,7 @@ void Layer::conv () {
     } else {
         im2col(true_inputs,inputs);
     }
-
+    std::cout <<"Start gemm of " << name << std::endl;
     int i,j,j1,j2,k;
     //#pragma omp parallel for num_threads(4)
     for(i = M_start; i < M_start + M; ++i){   // i = 0; i < 64; i++
@@ -324,13 +326,15 @@ void Layer::activate(){
 
 void Layer::normalize(){
     std::cout<<"Normalization of " << name << std::endl;
-    float *alpha_coefs = new float[inFm];
-    float *beta_coefs = new float[inFm];
+    float *alpha_coefs = new float[outFm];
+    float *beta_coefs = new float[outFm];
     std::cout << "inW: " << inSize << std::endl;
-    for(int i=0; i < inFm; ++i){
+    std::cout << "input size: " << inSize * inSize * inFm << std::endl;
+    std::cout << "output size: " << inSize * inSize * outFm << std::endl;
+    for(int i=0; i < outFm; ++i){
         for (int j = pad; j < inSize - pad; ++j){
             for (int k = pad; k < inSize - pad; ++k){
-               outputData[inFm*inSize*k + inFm*j + i] = outputData[inFm*inSize*k + inFm*j + i] * alpha_coefs[i] + beta_coefs[i];
+               outputData[outFm*inSize*k + outFm*j + i] = outputData[outFm*inSize*k + outFm*j + i] * alpha_coefs[i] + beta_coefs[i];
             }
         }
     }
@@ -344,9 +348,9 @@ void Layer::postProcessing () {
     normalize();
 }
 
-void Layer::forward () {
+void Layer::forward (std::vector<Layer> layers) {
     if (!type.compare("conv")) {
-        conv();
+        conv(layers);
         postProcessing();
     }  
     else if (!type.compare("pool")) 

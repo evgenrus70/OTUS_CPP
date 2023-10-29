@@ -104,17 +104,18 @@ class vector_3d
 
 class Layer {
     public: 
-        int numLayer, inFm, outFm, inSize, pad, coreSize, stride;
+        int numLayer, inFm, outFm, inSize, pad, coreSize, stride, prevLayer;
         std::string name;
         std::string type;
         float *inputData;
         float *outputData;
         float *weights;
+        std::vector<Layer> layers;
 
-        Layer (std::string,int,int,int,int,int,int,int);
+        Layer (std::string,int,int,int,int,int,int,int,int);
         void print();
-        void forward(); 
-        void conv();
+        void forward(std::vector<Layer>); 
+        void conv(std::vector<Layer>);
         void pool();
         void upsample();
         void addBias();

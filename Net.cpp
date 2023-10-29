@@ -87,7 +87,7 @@ void Net::start () {
     //layers[0].forward();
     int i = 0;
     for (auto& layer : layers) {
-        layer.forward();
+        layer.forward(layers);
         printf("inputs addr: %X\n",layer.inputData);
         printf("outputs addr: %X\n",layer.outputData);
         if (i < layers.size() - 1)
